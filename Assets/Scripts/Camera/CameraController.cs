@@ -4,7 +4,7 @@ public class CameraController : MonoBehaviour
 {
     [Header("Target Settings")]
     [SerializeField] private Transform _target;
-    [SerializeField] private Vector3 _baseOffset = new Vector3(0, 2f, -10f);
+    [SerializeField] private Vector3 _baseOffset = new Vector3(0, 3f, -10f);
     [SerializeField] private float _followSmoothing = 2f;
 
     [Header("Cinematic Effects")]
@@ -29,6 +29,7 @@ public class CameraController : MonoBehaviour
 
     private Camera _camera;
     [SerializeField] private PlayerController _playerController;
+    [SerializeField] private PlayerAnimationController _playerAnimationController;
     private Vector3 _currentVelocity;
     private Vector3 _lookAheadPosition;
     private float _currentLookAhead;
@@ -65,10 +66,10 @@ public class CameraController : MonoBehaviour
     }
     private void UpdateCameraState()
     {
-        if (_playerController == null)
+        if (_playerAnimationController == null)
         { return; }
 
-        if (_playerController.IsMoving())
+        if (_playerAnimationController.IsMoving())
         {
             currentState = CameraStates.Following;
         }
@@ -90,9 +91,9 @@ public class CameraController : MonoBehaviour
         {
             case CameraStates.Following:
                 //hareket yönünde kamerayý ileri hareket ettir
-                targetLookAhead = new Vector3(inputDir.x * _lookAheadDistance, inputDir.y * _lookAheadDistance * 0.5f,0);
+                targetLookAhead = new Vector3(inputDir.x * _lookAheadDistance, 0,0);
                 //hýz bazlý offset ekliyoruz
-                Vector3 velocityOffset = new Vector3(velocity.x * _velocityInfluence,velocity.y*_velocityInfluence*0.5f,0);
+                Vector3 velocityOffset = new Vector3(velocity.x * _velocityInfluence,0,0);
                 velocityOffset = Vector3.ClampMagnitude(velocityOffset, _maxVelocityOffset);
                 targetLookAhead += velocityOffset;
                 break;
@@ -111,7 +112,8 @@ public class CameraController : MonoBehaviour
     private void UpdatePosition()
     {
         //target position hesapla
-        Vector3 targetPosition = _target.position + _baseOffset + _lookAheadPosition + _shakeOffset;
+        Vector3 playerposition = new Vector3(_target.position.x, -3, 0);
+        Vector3 targetPosition = playerposition + _baseOffset + _lookAheadPosition + _shakeOffset; ;
 
         //smooth camera movement
         transform.position = Vector3.SmoothDamp(transform.position,targetPosition,ref _currentVelocity,1f/_followSmoothing);

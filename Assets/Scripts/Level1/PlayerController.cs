@@ -12,32 +12,29 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private bool _flipSpriteForDirection = true; //sprite'ý yönümüze göre çevirme kontrolü
     [SerializeField] private float _directionThreshHold = 0.1f; //yön deðiþtirmek için gereken minimum hareket miktarý
 
-    [Header("Animation Settings")]
-    [SerializeField] private float _walkAnimationSpeed = 1f;
-    [SerializeField] private string _idleAnimationName = "Idle";
-    [SerializeField] private string _walkAnimationName = "Walk";
 
     [Header("Shooting Settings")]
     [SerializeField] private GameObject _bulletPrefab;
     [SerializeField] private Transform _firePoint;
     [SerializeField] private float _fireRate = 0.3f;
+    private float _nextFireTime;
+    Vector3 _fireposition;
 
     private Rigidbody2D _playerRB;
-    private SpriteRenderer _spriteRenderer;
-    private Animator _animator;
+    [SerializeField]private SpriteRenderer _spriteRenderer;
+    
     private Vector2 _currentVelocity;
     private Vector2 _velocitySmoothing;
     private Vector2 _inputVector;
     private bool _facingRight = true;
-    private float _nextFireTime;
-
-    private AnimationState _currentAnimationState = AnimationState.Idle;
-
+    private BoxCollider2D _boxCollider;
+    [SerializeField] private PlayerAnimationController _playerAnimationController;
+    //-1.1 / -4.0
     private void Start()
     {
         _playerRB = GetComponent<Rigidbody2D>();
         _spriteRenderer = GetComponent<SpriteRenderer>();
-        _animator = GetComponent<Animator>();
+        _boxCollider = GetComponent<BoxCollider2D>();
 
         _playerRB.gravityScale = 0f;
     }
@@ -45,7 +42,6 @@ public class PlayerController : MonoBehaviour
     {
         SetInput();
         SetShooting();
-        UpdateAnimations();
         UpdateSpriteDirection();
     }
     private void FixedUpdate()
@@ -54,41 +50,44 @@ public class PlayerController : MonoBehaviour
     }
     private void SetInput()
     {
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
+            float horizontal = Input.GetAxisRaw("Horizontal");
+            float vertical = Input.GetAxisRaw("Vertical");
 
-        //Input vektörünü kaydet
-        _inputVector = new Vector2(horizontal, vertical).normalized;
+            //Input vektörünü kaydet
+            _inputVector = new Vector2(horizontal, vertical).normalized;
     }
     private void SetMovement()
     {
-        Vector2 moveVelocity = new Vector2(_inputVector.x * _moveSpeed, _inputVector.y * _moveSpeed * _zSpeedMultiplier); //z ekseni için farklý hýz
-        _currentVelocity = Vector2.SmoothDamp(_currentVelocity, moveVelocity , ref _velocitySmoothing, _smoothTime); //yumuþak hareket geçiþi
-        _playerRB.linearVelocity = _currentVelocity;
-        _currentAnimationState = _currentVelocity.magnitude > 0.1f? AnimationState.Walk : AnimationState.Idle; //state güncelledik
-        UpdateDepthSorting(); //z ekseni için depth sorting
+            Vector2 moveVelocity = new Vector2(_inputVector.x * _moveSpeed, _inputVector.y * _moveSpeed * _zSpeedMultiplier); //z ekseni için farklý hýz
+            _currentVelocity = Vector2.SmoothDamp(_currentVelocity, moveVelocity, ref _velocitySmoothing, _smoothTime); //yumuþak hareket geçiþi
+            _playerRB.linearVelocity = _currentVelocity;
+            _playerAnimationController.UpdateAnimations(_currentVelocity.magnitude > 0.1f ? AnimationState.Walk : AnimationState.Idle);
+            UpdateDepthSorting();//z ekseni için depth sorting
     }
     private void UpdateDepthSorting()
     {
         Vector3 pos = transform.position;
         if (_spriteRenderer != null)
         {
-            _spriteRenderer.sortingOrder = (int)MathF.Round(-pos.y *100); //karakterin orderini deðiþtirerek nesnelerin karakterin önüne veya arkasýna geçmesi durumu
+            _spriteRenderer.sortingOrder = (int)MathF.Round(-pos.y); //karakterin orderini deðiþtirerek nesnelerin karakterin önüne veya arkasýna geçmesi durumu
         }
     }
     private void UpdateSpriteDirection()
     {
-        if(!_flipSpriteForDirection ||_spriteRenderer == null)
-            return;
+        if(_spriteRenderer == null)
+        {  return; }
 
+        
         //X eksenindeki hareket ediþ miktarýma göre spriteýmý çevir
         if (_inputVector.x > _directionThreshHold && !_facingRight)
         {
             FlipSprite();
+            _boxCollider.offset = new Vector2(-0.07360274f, 0);
         }
         else if (_inputVector.x < -_directionThreshHold && _facingRight)
         {
             FlipSprite();
+            _boxCollider.offset = new Vector2(0.09f, 0);
         }
     }
     private void FlipSprite()
@@ -96,45 +95,34 @@ public class PlayerController : MonoBehaviour
         _facingRight = !_facingRight;
         _spriteRenderer.flipX = !_facingRight;
     }
-    private void UpdateAnimations()
-    {
-        if (_animator == null)
-            return;
-
-        switch (_currentAnimationState)
-        {
-            case AnimationState.Idle:_animator.Play(_idleAnimationName);
-                break;
-            case AnimationState.Walk:
-                _animator.Play(_walkAnimationName);
-                //animasyon hýzýný movement hýzýna ayarladýk
-                _animator.speed = Mathf.Lerp(0.8f, 1.5f, _currentVelocity.magnitude / _moveSpeed);
-                break;
-        }
-    }
     private void SetShooting()
     {//Input.GetButton("Fire1")
-        if ( Input.GetMouseButtonDown(0)&& Time.time >= _nextFireTime)
+        if (Input.GetMouseButtonDown(0) && Time.time >= _nextFireTime)
         {
-            Shoot();
+            _playerAnimationController.StartShooting();
+            _playerAnimationController.UpdateAnimations(AnimationState.Shoot);
+            Invoke(nameof(Shoot),0.4f);
         }
     }
     private void Shoot()
     {
         _nextFireTime = Time.time + _fireRate;
-        if (_bulletPrefab != null && _firePoint!=null)
+        if (_bulletPrefab != null && _firePoint != null)
         {
+            if(_facingRight) _fireposition = new Vector3(_firePoint.transform.position.x + 0.2f, _firePoint.transform.position.y + 0.7f, 0);
+            else _fireposition = new Vector3(_firePoint.transform.position.x - 0.2f, _firePoint.transform.position.y + 0.7f, 0);
             Vector3 ShootDirection = _facingRight ? Vector3.right : Vector3.left;
-            GameObject bullet = Instantiate( _bulletPrefab,_firePoint.position,Quaternion.identity);
+            GameObject bullet = Instantiate(_bulletPrefab, _fireposition, Quaternion.identity);
             //mermi yönünü ayarlama
             Rigidbody2D bulletRB = bullet.GetComponent<Rigidbody2D>();
-            if(bulletRB!=null)
+            if (bulletRB != null)
             {
-                bulletRB.linearVelocity = ShootDirection*10; //mermi hýzý
+                bulletRB.linearVelocity = ShootDirection * 100; //mermi hýzý
             }
         }
     }
-    public bool IsMoving() => _currentAnimationState == AnimationState.Walk;
+
+
     public Vector2 GetVelocity() => _currentVelocity;
     public bool IsFacingRight() => _facingRight;
     public Vector2 GetInputDirection() => _inputVector;
