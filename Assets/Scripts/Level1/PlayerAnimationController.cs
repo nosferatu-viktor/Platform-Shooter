@@ -1,16 +1,15 @@
+using TMPro;
 using UnityEngine;
 
 public class PlayerAnimationController : MonoBehaviour
 {
 
     [Header("Animation Settings")]
-    [SerializeField] private float _walkAnimationSpeed = 1f;
     [SerializeField] private string _idleAnimationName = "Idle";
     [SerializeField] private string _walkAnimationName = "Walk";
-    [SerializeField] private string _shootAnimationName = "Shoot";
-    [SerializeField] private Animator _animator;
+    [SerializeField] public Animator _animator;
     private AnimationState _currentAnimationState = AnimationState.Idle;
-    private bool _isShooting=false;
+    public bool _isShooting=false;
     private void Awake()
     {
         _animator = GetComponent<Animator>();
@@ -32,12 +31,23 @@ public class PlayerAnimationController : MonoBehaviour
                     _animator.SetBool("IsWalking", true);
                     _animator.Play(_walkAnimationName);
                     //animasyon hýzýný movement hýzýna ayarladýk
-                    //_animator.speed = Mathf.Lerp(0.8f, 1.5f, _currentVelocity.magnitude / _moveSpeed);
+                    _animator.speed = Mathf.Lerp(0.8f, 1.5f, PlayerController.instance._currentVelocity.magnitude / 2.5f);
                     break;
                 case AnimationState.Shoot:
                     _isShooting = true;
                     _animator.SetTrigger("Shoot");
                     Invoke(nameof(StopShooting), 0.5f);
+                    break;
+                case AnimationState.Hurt:
+                    _animator.SetTrigger("IsHurt");
+                    break;
+                case AnimationState.Recharge:
+                    _animator.SetBool("IsRecharging",true);
+                    _animator.SetTrigger("Recharge");
+                    break;
+                case AnimationState.Dead:
+                    _animator.SetTrigger("IsDead");
+                    _animator.Play("Dead");
                     break;
             }
         }
@@ -45,12 +55,13 @@ public class PlayerAnimationController : MonoBehaviour
     public void StartShooting()
     {
         _animator.SetBool("IsShooting",true);
-        
+        PlayerController.IsShoot();
     }
     public void StopShooting()
     {
         _animator.SetBool("IsShooting", false);
         _isShooting = false;
+        PlayerController.IsShoot();
     }
     public bool IsMoving() => _currentAnimationState == AnimationState.Walk;
 

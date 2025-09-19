@@ -6,5 +6,7 @@ public enum AnimationState
     Walk,
     Run,
     Shoot,
+    Hurt,
+    Recharge,
     Dead
 }

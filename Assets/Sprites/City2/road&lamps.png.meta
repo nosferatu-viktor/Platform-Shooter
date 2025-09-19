@@ -52,7 +52,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 0
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -311,7 +311,13 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      road&lamps_0: 8917631078717147883
+      road&lamps_1: 7787093861142547095
+      road&lamps_2: -3919496039528227534
+      road&lamps_3: 4996063028497414381
+      road&lamps_4: -8701612067255861495
+      road&lamps_5: 816361476056193805
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
